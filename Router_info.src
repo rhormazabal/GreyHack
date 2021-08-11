@@ -1,4 +1,6 @@
-router = get_router("93.174.203.224")
+if params.len != 1 or params[0] == "-h" or params[0] == "--help" then exit("<b>Usage: "+program_path.split("/")[-1]+" [ip_address] </b>")
+address = params[0]
+router = get_router(address)
 print("<color=red>Info Router")
 print(router.public_ip+" -> <color=white>"+router.local_ip)
 // Router basic info
