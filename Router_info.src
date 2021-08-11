@@ -1,0 +1,44 @@
+router = get_router("93.174.203.224")
+print("<color=red>Info Router")
+print(router.public_ip+" -> <color=white>"+router.local_ip)
+// Router basic info
+print("Kernel: <color=white>"+router.kernel_version)
+print("BSSID: <color=white>"+router.bssid_name)
+print("ESSID: <color=white>"+router.essid_name)
+// Firewall rules
+print("<color=red>Reglas firewall")
+rules = router.firewall_rules
+if rules then
+for rule in rules
+	print(rule)
+end for
+else 
+	print("Sin firewall")
+end if
+// open ports
+print("<color=red>Puertos Abiertos")
+ports = router.used_ports
+for port in ports
+	if port.is_closed == false then
+		print("IP: <color=white>"+port.get_lan_ip)
+		print("   Port: <color=white>" + port.port_number + " " +router.port_info(port))
+	end if
+end for
+//closed ports
+print("<color=red>Puertos Cerrados")
+ports = router.used_ports
+for port in ports
+	if port.is_closed then
+		print("IP: <color=white>"+port.get_lan_ip)
+		print("   Port: <color=white>" + port.port_number + " " +router.port_info(port))
+	end if
+end for
+
+// Network computers
+print("<color=red>Equipos en red")
+devices = router.devices_lan_ip
+for device in devices
+	if device != router.local_ip then
+		print("IP: <color=white>"+device)
+	end if
+end for
