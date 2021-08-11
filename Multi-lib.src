@@ -1,0 +1,123 @@
+if params.len == 0 or params.len > 2 or params[0] == "-h" or params[0] == "--help" then exit("<b>Usage: "+program_path.split("/")[-1]+" [ip_address]</b>")
+address = params[0]
+port = params[1].to_int
+Meta = include_lib("/lib/metaxploit.so")
+if params.len == 1 then
+	session = Meta.net_use(address)
+else
+	session = Meta.net_use(address, port)
+end if
+metalib = session.dump_lib
+zones_overflow = []
+zones_type_overflow = []
+files = []
+
+// Declare functions
+Analy_metalib = function(metalib)
+	globals.zones_overflow = []
+	print("<color=red>"+metalib.lib_name + " " + metalib.version)
+	zones = Meta.scan(metalib)
+	print(zones)
+	for zone in zones 
+		words = Meta.scan_address(metalib, zone).split("Unsafe check:")
+		for word in words
+			if word.split(" ").len > 5 then
+				globals.zones_overflow.push([zone,slice(word.split(" ")[4],3,word.split(" ")[4].len-5)])
+			end if
+		end for
+	end for
+	// Overflow libraries for each code
+	print("<color=red>inicia ataque masivo")
+	count = 0 
+	globals.zones_type_overflow = []
+	for ovf in globals.zones_overflow
+		print("--------------------")
+		globals.zones_type_overflow.push([ovf[0],ovf[1],typeof(metalib.overflow(ovf[0],ovf[1]))])
+		print("Tipo: <color=white>"+ globals.zones_type_overflow[count][2])
+		print("<color=white>"+("["+count+"]["+ovf[0]+","+ovf[1]+"]"))
+		print("--------------------")
+		count = count+1
+	end for
+end function
+
+Explo_Shell = function(bug, shell)
+	remshell = metalib.overflow(zones_type_overflow[bug][0],zones_type_overflow[bug][1])
+	rempc = remshell.host_computer
+	print("IP Local: "+rempc.local_ip)
+	print("IP Publica: "+rempc.public_ip)
+	
+	if shell == "SI" then
+		remshell.start_terminal
+	else
+		// get library list
+		parent = rempc.File("/lib")
+		if parent.is_folder then
+			globals.files = parent.get_files
+			// Get version for each file
+			count = 0
+			for file in globals.files
+				print("["+count+"] "+file.name)
+				if file.name != "kernel_router.so" and file.name != "libhttp.so" then
+					lib_rem = Meta.load("/lib/"+file.name)
+					print("<color=red>"+file.name+" "+lib_rem.version)
+				end if
+				count = count+1
+			end for
+		end if
+		lib = user_input("Libreria: ")
+		globals.metalib = Meta.load("/lib/"+globals.files[lib.val].name)
+	end if
+end function
+
+Explo_Compu = function(bug)
+	rempc = metalib.overflow(zones_type_overflow[bug][0],zones_type_overflow[bug][1])
+	print("IP Local: "+rempc.local_ip)
+	print("IP Publica: "+rempc.public_ip)
+	
+	// get library list
+	parent = rempc.File("/lib")
+	if parent.is_folder then
+		globals.files = parent.get_files
+		// Get version for each file
+		count = 0
+		for file in globals.files
+			print("["+count+"] "+file.name)
+			if file.name != "kernel_router.so" and file.name != "libhttp.so" then
+				lib_rem = Meta.load("/lib/"+file.name)
+				print("<color=red>"+file.name+" "+lib_rem.version)
+			end if
+			count = count+1
+		end for
+	end if
+	lib = user_input("Libreria: ")
+	globals.metalib = Meta.load("/lib/"+globals.files[lib.val].name)
+end function
+
+Explo_Password = function(bug,usuario,pass)
+	metalib.overflow(zones_type_overflow[bug][0],zones_type_overflow[bug][1],pass)
+	
+	nw_shll = get_shell(usuario,pass)
+	nw_shll.start_terminal
+end function
+
+Selec_Explo = function(bug)
+	if zones_type_overflow[bug][2] == "shell" then 
+		sll = user_input("Abrir terminal [SI/NO]: ")
+		Explo_Shell(bug,sll)
+   else if zones_type_overflow[bug][2] == "computer" then 
+		Explo_Compu(bug)
+   else if zones_type_overflow[bug][2] == "number" then 
+	   pass = user_input("usuario: ")
+		usr = user_input("Nueva password: ")
+		Explo_Password(bug,usr,pass)
+	else	
+		exit("No implementado")
+	end if
+end function
+
+// Loop start
+while (true)
+	Analy_metalib(metalib)
+	bug = user_input("bug: ")
+	Selec_Explo(bug.val)
+end while
