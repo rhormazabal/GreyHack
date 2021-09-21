@@ -1,10 +1,10 @@
 if params.len == 0 or params.len > 2 or params[0] == "-h" or params[0] == "--help" then exit("<b>Usage: "+program_path.split("/")[-1]+" [ip_address]</b>")
 address = params[0]
-port = params[1].to_int
 Meta = include_lib("/lib/metaxploit.so")
 if params.len == 1 then
 	session = Meta.net_use(address)
 else
+	port = params[1].to_int
 	session = Meta.net_use(address, port)
 end if
 metalib = session.dump_lib
